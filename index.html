@@ -603,9 +603,9 @@ async function wyslij() {
 
   btn.textContent = '⏳ Wysyłam mail…';
 
-  // 3) Wyślij mail przez AJAX FormSubmit (bez załącznika — PDF już lokalnie)
-  //    Plusy: szybko, zwraca błąd, działa nawet gdy aktywacja
-  //    jeszcze nie potwierdzona (dostajesz wtedy info zwrotne).
+  // Klasyczny POST przez ukrytą ramkę. NIE używamy AJAX bo FormSubmit
+  // nie zwraca nagłówków CORS dla nieaktywowanych adresów (ich
+  // polityka antyspamowa). Form submit cross-origin zawsze działa.
   var sciany = state.sciany.map(function(m){ return (m.ok?'[OK]':'[BRAK]') + ' ' + m.symbol + ' — ' + m.opis; }).join('\n');
   var budynek = state.budynek.map(function(m){ return (m.ok?'[OK]':'[BRAK]') + ' ' + m.symbol + ' — ' + m.opis; }).join('\n');
   var fullOk = state.sciany.every(function(m){return m.ok;}) && state.budynek.every(function(m){return m.ok;});
@@ -615,6 +615,7 @@ async function wyslij() {
     _captcha: 'false',
     _template: 'box',
     _cc: state.klient.email,
+    _next: 'data:text/html;charset=utf-8,<title>OK</title><p>Wyslano</p>',
     'Inwestor': state.klient.imie,
     'E-mail': state.klient.email,
     'Telefon': state.klient.telefon,
@@ -626,60 +627,26 @@ async function wyslij() {
     'Wysokości budynku': budynek + (state.uwagiBudynek ? '\n\nUWAGI: ' + state.uwagiBudynek : '')
   };
 
-  try {
-    var resp = await fetch('https://formsubmit.co/ajax/' + FORMSUBMIT_EMAIL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    var json = await resp.json().catch(function(){ return {}; });
-    if (resp.ok && (json.success === 'true' || json.success === true)) {
-      showStatus('✅ Mail wysłany! PDF pobrał się lokalnie. Kopia na: ' + state.klient.email, true);
-      btn.textContent = '✅ Wysłano';
-    } else if (json.message && /activate|confirm|verification/i.test(json.message)) {
-      showStatus('⚠ Pierwsza wysyłka — FormSubmit właśnie wysłał na ' + FORMSUBMIT_EMAIL
-               + ' link aktywacyjny („Confirm your email"). Kliknij go i wyślij ankietę ponownie. PDF jest już pobrany lokalnie.', false);
-      btn.disabled = false;
-      btn.textContent = '📧 Spróbuj ponownie';
-    } else {
-      showStatus('⚠ Mail nie poszedł: ' + (json.message || ('HTTP ' + resp.status))
-               + '. PDF pobrał się lokalnie — wyślij go ręcznie.', false);
-      btn.disabled = false;
-      btn.textContent = '📧 Spróbuj ponownie';
-    }
-  } catch (e) {
-    // Fetch padł — zwykle blokuje go adblocker lub file:// origin.
-    // FALLBACK: tradycyjny POST formularza przez ukrytą ramkę (działa
-    // wszędzie, ale nie zobaczymy odpowiedzi).
-    var msg = String(e && e.message || e);
-    btn.textContent = '⏳ Próba alternatywna…';
-    var ok = await wyslijFallback(payload);
-    if (ok) {
-      showStatus('✅ Wysłano (przez fallback). Sprawdź skrzynkę za 1-2 minuty. '
-               + 'Jeśli to PIERWSZA wysyłka — najpierw kliknij link aktywacyjny w mailu od formsubmit.co (sprawdź też SPAM).', true);
-      btn.textContent = '✅ Wysłano';
-    } else {
-      var hint = '';
-      if (location.protocol === 'file:') {
-        hint = ' Otwierasz stronę przez plik (file://) — niektóre przeglądarki blokują wysyłkę. Otwórz przez serwer (np. GitHub Pages).';
-      } else {
-        hint = ' Sprawdź czy AdBlocker/Brave nie blokuje formsubmit.co (zwykle to przyczyna).';
-      }
-      showStatus('⚠ Brak połączenia z serwerem maila (' + msg + ').' + hint
-               + ' PDF jest już pobrany lokalnie — wyślij ręcznie.', false);
-      btn.disabled = false;
-      btn.textContent = '📧 Spróbuj ponownie';
-    }
+  var ok = await wyslijIframe(payload);
+  if (ok) {
+    showStatus('✅ Wysłano. Sprawdź skrzynkę ' + FORMSUBMIT_EMAIL + ' za 1-2 minuty.'
+             + ' Jeśli to PIERWSZA wysyłka — najpierw kliknij link aktywacyjny w mailu od formsubmit.co'
+             + ' (sprawdź też SPAM). PDF jest już pobrany lokalnie.', true);
+    btn.textContent = '✅ Wysłano';
+  } else {
+    showStatus('⚠ Nie udało się wysłać. PDF pobrał się lokalnie — wyślij go ręcznie.', false);
+    btn.disabled = false;
+    btn.textContent = '📧 Spróbuj ponownie';
   }
 }
 
-// Fallback: klasyczny POST formularza w ukrytej ramce. Nie sprawdza
-// odpowiedzi, ale request idzie do FormSubmit. Działa nawet gdy AJAX
-// jest blokowany (adblocker, file://).
-function wyslijFallback(payload) {
+// Klasyczny POST formularza w ukrytej ramce. NIE robi CORS preflight
+// (browser pozwala na cross-origin form submission). Nie sprawdza
+// odpowiedzi serwera, ale request gwarantowanie idzie do FormSubmit.
+function wyslijIframe(payload) {
   return new Promise(function(resolve){
     try {
-      var iframeName = 'fsFallback_' + Date.now();
+      var iframeName = 'fsSubmit_' + Date.now();
       var iframe = document.createElement('iframe');
       iframe.name = iframeName;
       iframe.style.display = 'none';
@@ -691,13 +658,9 @@ function wyslijFallback(payload) {
       form.target = iframeName;
       form.style.display = 'none';
 
-      // Dodaj _next bo bez tego FormSubmit przekieruje ramkę do swojego dziekuję
-      var withNext = Object.assign({}, payload, {
-        _next: 'data:text/html,<title>OK</title><p>Wyslano</p>'
-      });
-      Object.keys(withNext).forEach(function(k){
+      Object.keys(payload).forEach(function(k){
         var i = document.createElement('input');
-        i.type = 'hidden'; i.name = k; i.value = withNext[k] == null ? '' : String(withNext[k]);
+        i.type = 'hidden'; i.name = k; i.value = payload[k] == null ? '' : String(payload[k]);
         form.appendChild(i);
       });
       document.body.appendChild(form);
@@ -710,7 +673,8 @@ function wyslijFallback(payload) {
       };
       iframe.onload = function(){ finish(true); };
       iframe.onerror = function(){ finish(false); };
-      setTimeout(function(){ finish(true); }, 12000);
+      // Bezpiecznik: po 10s i tak zakończ (FormSubmit może nie zwrócić nic do iframe)
+      setTimeout(function(){ finish(true); }, 10000);
 
       form.submit();
     } catch (e) {
