@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Potwierdzenie wymiarów projektu — GIEROS</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
     --ink: #1a1a1a;
@@ -324,9 +325,6 @@
   <img id="lightboxImg" src="" alt="">
 </div>
 
-<!-- Hidden PDF mount -->
-<div class="pdf-hidden" id="pdfMount"></div>
-
 <script>
 // ──────────────────────────────────────────────────────────────
 // KONFIG — zmień na swój adres
@@ -418,108 +416,164 @@ function collectState() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Budowa zawartości PDF
+// Transliteracja polskich znaków na ASCII (jsPDF default font
+// nie ma polskich glifow — alternatywa: zaladowac TTF, ale to
+// dodatkowe ~200KB). PDF jest skrotem; pelne polskie znaki sa
+// w tresci maila i na stronie.
 // ──────────────────────────────────────────────────────────────
-function buildPdfHtml(state) {
+var PL_MAP = {ą:'a',Ą:'A',ć:'c',Ć:'C',ę:'e',Ę:'E',ł:'l',Ł:'L',ń:'n',Ń:'N',ó:'o',Ó:'O',ś:'s',Ś:'S',ż:'z',Ż:'Z',ź:'z',Ź:'Z'};
+function pl(s) {
+  return String(s == null ? '' : s).replace(/[ąĄćĆęĘłŁńŃóÓśŚżŻźŹ]/g, function(c){ return PL_MAP[c] || c; });
+}
+
+// ──────────────────────────────────────────────────────────────
+// Generuj PDF programowo (jsPDF + autotable) — szybko, mały plik
+// ──────────────────────────────────────────────────────────────
+function generujPdf(state) {
+  var jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (!jsPDFCtor) throw new Error('Biblioteka jsPDF nie zaladowala sie.');
+  var doc = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
   var allSciany = state.sciany.every(function(m){ return m.ok; });
   var allBudynek = state.budynek.every(function(m){ return m.ok; });
   var fullOk = allSciany && allBudynek;
-  var statusColor = fullOk ? '#1f4d2b' : '#7a5a00';
-  var statusBg = fullOk ? '#d4edda' : '#fdf3d8';
-  var statusText = fullOk
-    ? 'PROJEKT POTWIERDZONY — wszystkie wymiary zaakceptowane'
-    : 'POTWIERDZENIE Z UWAGAMI — sprawdź szczegóły poniżej';
-
-  var html = '';
-  html += '<div style="font-family:Segoe UI,Arial,sans-serif;color:#1a1a1a;">';
 
   // Header
-  html += '<div style="border-bottom:4px solid #1f4d2b;padding-bottom:12px;margin-bottom:16px;">';
-  html += '<div style="font-size:22px;font-weight:700;color:#1f4d2b;">GIEROS</div>';
-  html += '<div style="font-size:14px;color:#555;margin-top:2px;">Konstrukcje drewniane · Potwierdzenie wymiarów projektu</div>';
-  html += '</div>';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(31, 77, 43);
+  doc.text('GIEROS', 14, 18);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(85, 85, 85);
+  doc.text(pl('Konstrukcje drewniane · Potwierdzenie wymiarów projektu'), 14, 24);
+  doc.setDrawColor(31, 77, 43);
+  doc.setLineWidth(0.7);
+  doc.line(14, 28, 196, 28);
 
-  // Status
-  html += '<div style="background:' + statusBg + ';border:1px solid ' + statusColor + ';color:' + statusColor + ';padding:12px 14px;border-radius:6px;font-weight:700;margin-bottom:18px;text-align:center;font-size:14px;">';
-  html += statusText;
-  html += '</div>';
+  // Status banner
+  var sBg = fullOk ? [212, 237, 218] : [253, 243, 216];
+  var sFg = fullOk ? [21, 87, 36] : [122, 90, 0];
+  doc.setFillColor(sBg[0], sBg[1], sBg[2]);
+  doc.rect(14, 33, 182, 11, 'F');
+  doc.setDrawColor(sFg[0], sFg[1], sFg[2]);
+  doc.setLineWidth(0.3);
+  doc.rect(14, 33, 182, 11, 'S');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(sFg[0], sFg[1], sFg[2]);
+  doc.text(pl(fullOk
+    ? 'PROJEKT POTWIERDZONY — wszystkie wymiary zaakceptowane'
+    : 'POTWIERDZENIE Z UWAGAMI — sprawdz szczegoly ponizej'), 105, 40, { align: 'center' });
 
-  // Klient
-  html += '<h3 style="color:#1f4d2b;border-bottom:2px solid #1f4d2b;padding-bottom:4px;font-size:14px;">Dane inwestora</h3>';
-  html += '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px;">';
-  html += rowKv('Imię i nazwisko', state.klient.imie);
-  html += rowKv('Adres budowy', state.klient.adres);
-  html += rowKv('E-mail', state.klient.email);
-  html += rowKv('Telefon', state.klient.telefon);
-  html += rowKv('Data', state.klient.data);
-  if (state.requestId) html += rowKv('ID zlecenia', state.requestId);
-  html += '</table>';
-
-  // Sciany
-  html += '<h3 style="color:#1f4d2b;border-bottom:2px solid #1f4d2b;padding-bottom:4px;font-size:14px;">Wymiary ścian — okna, drzwi, poziomy</h3>';
-  html += markersTable(state.sciany);
-  if (state.uwagiSciany) html += '<div style="background:#fdf3d8;padding:8px 12px;border-radius:4px;margin:8px 0 16px;font-size:12px;border-left:3px solid #7a5a00;"><b>Uwagi:</b> ' + esc(state.uwagiSciany) + '</div>';
-
-  // Budynek
-  html += '<h3 style="color:#1f4d2b;border-bottom:2px solid #1f4d2b;padding-bottom:4px;font-size:14px;">Wysokości budynku</h3>';
-  html += markersTable(state.budynek);
-  if (state.uwagiBudynek) html += '<div style="background:#fdf3d8;padding:8px 12px;border-radius:4px;margin:8px 0 16px;font-size:12px;border-left:3px solid #7a5a00;"><b>Uwagi:</b> ' + esc(state.uwagiBudynek) + '</div>';
-
-  // Podpis
-  html += '<div style="margin-top:30px;padding-top:14px;border-top:1px solid #d0d0d0;font-size:11px;color:#6a6a6a;text-align:center;">';
-  html += 'Potwierdzenie wygenerowane elektronicznie przez inwestora · ' + new Date().toLocaleString('pl-PL');
-  html += '</div>';
-
-  html += '</div>';
-  return html;
-}
-function rowKv(k, v) {
-  return '<tr><td style="background:#f4f5f3;padding:6px 10px;border:1px solid #d0d0d0;width:35%;font-weight:600;color:#2d2d2d;">' + esc(k) + '</td>'
-       + '<td style="padding:6px 10px;border:1px solid #d0d0d0;">' + esc(v || '—') + '</td></tr>';
-}
-function markersTable(list) {
-  var html = '<table style="width:100%;border-collapse:collapse;margin-bottom:8px;font-size:12px;">';
-  list.forEach(function(m){
-    var bg = m.ok ? '#e0f0e3' : '#ffffff';
-    var icon = m.ok ? '✓' : '✗';
-    var iconColor = m.ok ? '#1f4d2b' : '#b03a2e';
-    html += '<tr style="background:' + bg + ';">';
-    html += '<td style="padding:6px 10px;border:1px solid #d0d0d0;width:32px;text-align:center;font-weight:700;color:#7a5a00;background:#fff4d6;">' + esc(m.symbol) + '</td>';
-    html += '<td style="padding:6px 10px;border:1px solid #d0d0d0;">' + esc(m.opis) + '</td>';
-    html += '<td style="padding:6px 10px;border:1px solid #d0d0d0;width:40px;text-align:center;font-weight:700;color:' + iconColor + ';font-size:14px;">' + icon + '</td>';
-    html += '</tr>';
+  // Dane inwestora
+  doc.autoTable({
+    startY: 50,
+    head: [[{ content: pl('Dane inwestora'), colSpan: 2, styles: { halign: 'left' } }]],
+    body: [
+      [pl('Imie i nazwisko'), pl(state.klient.imie || '—')],
+      [pl('Adres budowy'),    pl(state.klient.adres || '—')],
+      [pl('E-mail'),          pl(state.klient.email || '—')],
+      [pl('Telefon'),         pl(state.klient.telefon || '—')],
+      [pl('Data'),            pl(state.klient.data || '—')],
+    ].concat(state.requestId ? [[pl('ID zlecenia'), String(state.requestId)]] : []),
+    theme: 'grid',
+    styles: { fontSize: 10, cellPadding: 2.5 },
+    headStyles: { fillColor: [31, 77, 43], textColor: 255, fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: 50, fillColor: [244, 245, 243], fontStyle: 'bold' } }
   });
-  html += '</table>';
-  return html;
+
+  // Wymiary scian
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(31, 77, 43);
+  doc.text(pl('Wymiary scian — okna, drzwi, poziomy'), 14, doc.lastAutoTable.finalY + 10);
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 12,
+    head: [['Sym.', pl('Co sprawdzic'), 'Status']],
+    body: state.sciany.map(function(m){
+      return [m.symbol, pl(m.opis), m.ok ? 'OK' : 'BRAK'];
+    }),
+    theme: 'grid',
+    styles: { fontSize: 10, cellPadding: 2.5 },
+    headStyles: { fillColor: [31, 77, 43], textColor: 255 },
+    columnStyles: {
+      0: { cellWidth: 14, halign: 'center', fontStyle: 'bold', fillColor: [255, 244, 214], textColor: [122, 90, 0] },
+      2: { cellWidth: 22, halign: 'center', fontStyle: 'bold' }
+    },
+    didParseCell: function(data){
+      if (data.section === 'body' && data.column.index === 2) {
+        var isOk = data.cell.raw === 'OK';
+        data.cell.styles.textColor = isOk ? [31, 77, 43] : [176, 58, 46];
+        data.cell.styles.fillColor = isOk ? [224, 240, 227] : [255, 232, 230];
+      }
+    }
+  });
+  if (state.uwagiSciany) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setFillColor(253, 243, 216);
+    doc.rect(14, doc.lastAutoTable.finalY + 3, 182, 10, 'F');
+    doc.setTextColor(122, 90, 0);
+    doc.text(pl('UWAGI: ' + state.uwagiSciany), 18, doc.lastAutoTable.finalY + 9);
+    doc.lastAutoTable.finalY += 13;
+  }
+
+  // Wysokosci budynku
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(31, 77, 43);
+  doc.text(pl('Wysokosci budynku'), 14, doc.lastAutoTable.finalY + 10);
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 12,
+    head: [['Sym.', pl('Co sprawdzic'), 'Status']],
+    body: state.budynek.map(function(m){
+      return [m.symbol, pl(m.opis), m.ok ? 'OK' : 'BRAK'];
+    }),
+    theme: 'grid',
+    styles: { fontSize: 10, cellPadding: 2.5 },
+    headStyles: { fillColor: [31, 77, 43], textColor: 255 },
+    columnStyles: {
+      0: { cellWidth: 14, halign: 'center', fontStyle: 'bold', fillColor: [255, 244, 214], textColor: [122, 90, 0] },
+      2: { cellWidth: 22, halign: 'center', fontStyle: 'bold' }
+    },
+    didParseCell: function(data){
+      if (data.section === 'body' && data.column.index === 2) {
+        var isOk = data.cell.raw === 'OK';
+        data.cell.styles.textColor = isOk ? [31, 77, 43] : [176, 58, 46];
+        data.cell.styles.fillColor = isOk ? [224, 240, 227] : [255, 232, 230];
+      }
+    }
+  });
+  if (state.uwagiBudynek) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setFillColor(253, 243, 216);
+    doc.rect(14, doc.lastAutoTable.finalY + 3, 182, 10, 'F');
+    doc.setTextColor(122, 90, 0);
+    doc.text(pl('UWAGI: ' + state.uwagiBudynek), 18, doc.lastAutoTable.finalY + 9);
+    doc.lastAutoTable.finalY += 13;
+  }
+
+  // Stopka
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(106, 106, 106);
+  doc.text(pl('Potwierdzenie wygenerowane elektronicznie przez inwestora · ') + new Date().toLocaleString('pl-PL'),
+           105, 285, { align: 'center' });
+
+  return doc.output('blob');
 }
 
 // ──────────────────────────────────────────────────────────────
-// Generuj PDF (Blob)
-// ──────────────────────────────────────────────────────────────
-async function generujPdf(state) {
-  var el = $('pdfMount');
-  el.innerHTML = buildPdfHtml(state);
-  var opts = {
-    margin: [10, 12, 10, 12],
-    filename: 'potwierdzenie.pdf',
-    image: { type: 'jpeg', quality: 0.96 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-  };
-  var blob = await html2pdf().set(opts).from(el).outputPdf('blob');
-  el.innerHTML = '';
-  return blob;
-}
-
-// ──────────────────────────────────────────────────────────────
-// Wysyłka maila z PDF jako załącznikiem
+// Wysyłka — równolegle: 1) AJAX do FormSubmit (text mail),
+//                       2) lokalne pobranie PDF (backup gdy mail
+//                          jeszcze nie aktywowany)
 // ──────────────────────────────────────────────────────────────
 async function wyslij() {
   var state = collectState();
 
-  // Walidacja
-  if (!state.klient.imie) return showStatus('Wpisz imię i nazwisko.', false);
+  if (!state.klient.imie)  return showStatus('Wpisz imię i nazwisko.', false);
   if (!state.klient.email) return showStatus('Wpisz adres e-mail.', false);
   if (!state.klient.adres) return showStatus('Wpisz adres budowy.', false);
 
@@ -527,89 +581,78 @@ async function wyslij() {
   btn.disabled = true;
   btn.textContent = '⏳ Generuję PDF…';
 
+  // 1) Generuj PDF (synchronicznie, jsPDF jest szybkie ~100ms)
   var pdfBlob;
   try {
-    pdfBlob = await generujPdf(state);
+    pdfBlob = generujPdf(state);
   } catch (e) {
     btn.disabled = false;
     btn.textContent = '📧 Wyślij potwierdzenie';
     return showStatus('Nie udało się wygenerować PDF: ' + (e.message || e), false);
   }
 
-  btn.textContent = '⏳ Wysyłam…';
-
-  // Multipart form do FormSubmit przez ukrytą ramkę
-  var iframeName = 'fsTarget_' + Date.now();
-  var iframe = document.createElement('iframe');
-  iframe.name = iframeName;
-  iframe.style.display = 'none';
-  document.body.appendChild(iframe);
-
-  var form = document.createElement('form');
-  form.action = 'https://formsubmit.co/' + encodeURIComponent(FORMSUBMIT_EMAIL);
-  form.method = 'POST';
-  form.enctype = 'multipart/form-data';
-  form.target = iframeName;
-  form.style.display = 'none';
-
-  function addField(name, value) {
-    var i = document.createElement('input');
-    i.type = 'hidden'; i.name = name; i.value = value == null ? '' : String(value);
-    form.appendChild(i);
-  }
-
-  addField('_subject', 'Potwierdzenie wymiarów — ' + state.klient.imie + (state.requestId ? ' (req=' + state.requestId + ')' : ''));
-  addField('_captcha', 'false');
-  addField('_template', 'box');
-  addField('_cc', state.klient.email);  // kopia do klienta
-  addField('_next', 'data:text/html,<title>OK</title><p>Wysłano</p>');
-
-  addField('Inwestor', state.klient.imie);
-  addField('E-mail', state.klient.email);
-  addField('Telefon', state.klient.telefon);
-  addField('Adres budowy', state.klient.adres);
-  addField('Data', state.klient.data);
-  if (state.requestId) addField('ID zlecenia', state.requestId);
-
-  // Statusy
-  var sciany = state.sciany.map(function(m){ return (m.ok?'✓':'✗') + ' ' + m.symbol + ' — ' + m.opis; }).join('\n');
-  var budynek = state.budynek.map(function(m){ return (m.ok?'✓':'✗') + ' ' + m.symbol + ' — ' + m.opis; }).join('\n');
-  addField('Wymiary ścian', sciany + (state.uwagiSciany ? '\n\nUWAGI: ' + state.uwagiSciany : ''));
-  addField('Wysokości budynku', budynek + (state.uwagiBudynek ? '\n\nUWAGI: ' + state.uwagiBudynek : ''));
-
-  // Załącznik PDF
+  // 2) Pobranie lokalne PDF — żeby klient zawsze miał kopię nawet jeśli mail padnie
   var pdfName = 'potwierdzenie_' + state.klient.imie.replace(/[^a-zA-Z0-9]+/g, '_') + '.pdf';
-  var pdfFile = new File([pdfBlob], pdfName, { type: 'application/pdf' });
-  var fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.name = 'attachment';
   try {
-    var dt = new DataTransfer();
-    dt.items.add(pdfFile);
-    fileInput.files = dt.files;
-  } catch (_e) {
-    // fallback: zapisz lokalnie i info do usera
     var url = URL.createObjectURL(pdfBlob);
     var a = document.createElement('a');
     a.href = url; a.download = pdfName;
     document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-  }
-  form.appendChild(fileInput);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+  } catch (_e) {}
 
-  document.body.appendChild(form);
+  btn.textContent = '⏳ Wysyłam mail…';
 
-  var done = false;
-  var finalize = function() {
-    if (done) return; done = true;
-    showStatus('✅ Potwierdzenie wysłane! Kopia poszła na Twój e-mail: ' + state.klient.email, true);
-    btn.textContent = '✅ Wysłano';
-    setTimeout(function(){ try { iframe.remove(); form.remove(); } catch(_){} }, 1500);
+  // 3) Wyślij mail przez AJAX FormSubmit (bez załącznika — PDF już lokalnie)
+  //    Plusy: szybko, zwraca błąd, działa nawet gdy aktywacja
+  //    jeszcze nie potwierdzona (dostajesz wtedy info zwrotne).
+  var sciany = state.sciany.map(function(m){ return (m.ok?'[OK]':'[BRAK]') + ' ' + m.symbol + ' — ' + m.opis; }).join('\n');
+  var budynek = state.budynek.map(function(m){ return (m.ok?'[OK]':'[BRAK]') + ' ' + m.symbol + ' — ' + m.opis; }).join('\n');
+  var fullOk = state.sciany.every(function(m){return m.ok;}) && state.budynek.every(function(m){return m.ok;});
+
+  var payload = {
+    _subject: 'Potwierdzenie wymiarów — ' + state.klient.imie + (state.requestId ? ' (req=' + state.requestId + ')' : ''),
+    _captcha: 'false',
+    _template: 'box',
+    _cc: state.klient.email,
+    'Inwestor': state.klient.imie,
+    'E-mail': state.klient.email,
+    'Telefon': state.klient.telefon,
+    'Adres budowy': state.klient.adres,
+    'Data': state.klient.data,
+    'ID zlecenia': state.requestId,
+    'Status': fullOk ? 'WSZYSTKIE WYMIARY POTWIERDZONE' : 'CZĘŚĆ WYMIARÓW WYMAGA POPRAWY',
+    'Wymiary ścian': sciany + (state.uwagiSciany ? '\n\nUWAGI: ' + state.uwagiSciany : ''),
+    'Wysokości budynku': budynek + (state.uwagiBudynek ? '\n\nUWAGI: ' + state.uwagiBudynek : '')
   };
-  iframe.onload = finalize;
-  setTimeout(finalize, 18000);
 
-  form.submit();
+  try {
+    var resp = await fetch('https://formsubmit.co/ajax/' + encodeURIComponent(FORMSUBMIT_EMAIL), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    var json = await resp.json().catch(function(){ return {}; });
+    if (resp.ok && (json.success === 'true' || json.success === true)) {
+      showStatus('✅ Mail wysłany! PDF pobrał się lokalnie. Kopia na: ' + state.klient.email, true);
+      btn.textContent = '✅ Wysłano';
+    } else if (json.message && /activate|confirm|verification/i.test(json.message)) {
+      showStatus('⚠ Pierwsza wysyłka — FormSubmit właśnie wysłał na ' + FORMSUBMIT_EMAIL
+               + ' link aktywacyjny („Confirm your email"). Kliknij go i wyślij ankietę ponownie. PDF jest już pobrany lokalnie.', false);
+      btn.disabled = false;
+      btn.textContent = '📧 Spróbuj ponownie';
+    } else {
+      showStatus('⚠ Mail nie poszedł: ' + (json.message || ('HTTP ' + resp.status))
+               + '. PDF pobrał się lokalnie — wyślij go ręcznie.', false);
+      btn.disabled = false;
+      btn.textContent = '📧 Spróbuj ponownie';
+    }
+  } catch (e) {
+    showStatus('⚠ Brak połączenia z serwerem maila: ' + (e.message || e)
+             + '. PDF pobrał się lokalnie.', false);
+    btn.disabled = false;
+    btn.textContent = '📧 Spróbuj ponownie';
+  }
 }
 
 function showStatus(msg, ok) {
