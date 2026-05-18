@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Potwierdzenie projektu — GIEROS</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --graphite: #2d2d2d;
+    --gieros: #1f4d2b;
+    --gieros-light: #2f6f3f;
+    --line: #d0d0d0;
+    --line-strong: #555;
+    --bg: #f4f5f3;
+    --bg-card: #ffffff;
+    --muted: #6a6a6a;
+    --accent-bg: #eaf2ec;
+    --danger: #b03a2e;
+    --warn-bg: #fdf3d8;
+    --warn-fg: #7a5a00;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink); }
+
+  /* Layout */
+  .app {
+    max-width: 1080px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .topbar {
+    background: var(--gieros);
+    color: white;
+    padding: 14px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .topbar-title { font-size: 17px; font-weight: 700; letter-spacing: 0.3px; }
+  .topbar-title small { font-weight: 400; opacity: 0.85; }
+  .topbar-meta { font-size: 13px; opacity: 0.92; text-align: right; }
+
+  .progress-wrap {
+    background: var(--gieros-light);
+    height: 6px; width: 100%;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%; background: #b8e8c5;
+    transition: width 0.35s ease;
+    width: 0;
+  }
+
+  /* Slide */
+  .stage {
+    flex: 1;
+    padding: 18px 22px 30px;
+  }
+  .slide {
+    background: var(--bg-card);
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.07);
+    padding: 24px 26px;
+    margin-bottom: 18px;
+    animation: slideIn 0.25s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .slide-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 2px solid var(--gieros);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+  .slide-title {
+    font-size: 19px; font-weight: 700; color: var(--gieros);
+    margin: 0;
+  }
+  .slide-counter {
+    font-size: 13px; color: var(--muted);
+    background: var(--accent-bg); padding: 4px 10px;
+    border-radius: 12px; font-weight: 600;
+  }
+  .slide-desc {
+    font-size: 14.5px; line-height: 1.55; color: var(--graphite);
+    margin: 0 0 16px;
+    white-space: pre-wrap;
+  }
+
+  /* PDF embed */
+  .pdf-frame {
+    width: 100%; height: 65vh; min-height: 460px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fafafa;
+  }
+  .pdf-missing {
+    padding: 40px; text-align: center;
+    color: var(--muted);
+    border: 1px dashed var(--line-strong);
+    border-radius: 6px;
+    background: var(--bg);
+  }
+
+  /* Acceptance row */
+  .accept-row {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: var(--accent-bg);
+    border-radius: 6px;
+    display: flex; align-items: center; gap: 12px;
+    border-left: 4px solid var(--gieros);
+  }
+  .accept-row input[type=checkbox] {
+    width: 22px; height: 22px;
+    accent-color: var(--gieros);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .accept-row label {
+    font-size: 15px; font-weight: 600; cursor: pointer; flex: 1;
+  }
+  .accept-row .accept-uwaga {
+    margin-top: 8px;
+    width: 100%;
+    grid-column: 1 / -1;
+  }
+  .accept-row.with-note { flex-wrap: wrap; }
+  .accept-row textarea {
+    width: 100%;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 13.5px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: white;
+    resize: vertical;
+    min-height: 50px;
+  }
+  .accept-row textarea:focus { outline: 2px solid var(--gieros); border-color: var(--gieros); }
+
+  /* Nav bar */
+  .navbar {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid var(--line);
+    padding: 14px 22px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  }
+  .btn {
+    border: 1px solid var(--gieros);
+    background: white;
+    color: var(--gieros);
+    padding: 10px 22px;
+    font-size: 15px;
+    font-family: inherit;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { background: var(--gieros); color: white; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--gieros); color: white; }
+  .btn-primary:hover:not(:disabled) { background: var(--gieros-light); }
+  .btn-big { padding: 12px 32px; font-size: 16px; }
+
+  /* Welcome / Summary screens */
+  .intro {
+    text-align: center;
+    padding: 40px 30px;
+  }
+  .intro h1 {
+    color: var(--gieros);
+    margin: 0 0 14px;
+    font-size: 26px;
+  }
+  .intro .lead {
+    font-size: 16px;
+    color: var(--graphite);
+    line-height: 1.6;
+    max-width: 640px;
+    margin: 0 auto 18px;
+  }
+  .intro .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px 18px;
+    max-width: 600px;
+    margin: 18px auto 0;
+    text-align: left;
+    background: var(--accent-bg);
+    padding: 16px 22px;
+    border-radius: 8px;
+  }
+  .intro .info-grid div { font-size: 14px; }
+  .intro .info-grid b { color: var(--gieros); }
+
+  .summary-list {
+    margin: 16px 0 22px;
+    padding: 0;
+    list-style: none;
+  }
+  .summary-list li {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 12px;
+    font-size: 14px;
+  }
+  .summary-list li:last-child { border-bottom: none; }
+  .summary-list .status {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+  }
+  .summary-list .status.ok { background: var(--gieros); color: white; }
+  .summary-list .status.no { background: var(--warn-bg); color: var(--warn-fg); border: 1px solid #d7b34a; }
+  .summary-list .item-title { flex: 1; }
+  .summary-list .item-note { font-size: 12.5px; color: var(--muted); font-style: italic; margin-top: 2px; }
+
+  .final-form {
+    margin-top: 20px;
+    padding: 18px 22px;
+    background: var(--accent-bg);
+    border-radius: 8px;
+  }
+  .final-form label { display: block; font-size: 13px; color: var(--graphite); font-weight: 600; margin-bottom: 4px; }
+  .final-form input {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: white;
+    margin-bottom: 10px;
+  }
+  .final-form input:focus { outline: 2px solid var(--gieros); border-color: var(--gieros); }
+
+  .status-banner {
+    margin: 18px 0;
+    padding: 14px 18px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 15px;
+    text-align: center;
+  }
+  .status-banner.ok { background: var(--gieros); color: white; }
+  .status-banner.no { background: var(--warn-bg); color: var(--warn-fg); border: 1px solid #d7b34a; }
+
+  .toast {
+    position: fixed;
+    left: 50%; bottom: 28px;
+    transform: translateX(-50%);
+    padding: 12px 22px;
+    border-radius: 24px;
+    background: var(--gieros);
+    color: white;
+    font-size: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    z-index: 9999;
+  }
+  .toast.err { background: var(--danger); }
+
+  .error-screen {
+    padding: 50px 30px;
+    text-align: center;
+  }
+  .error-screen h2 { color: var(--danger); margin-bottom: 10px; }
+  .error-screen code {
+    background: #f0e4e2;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: ui-monospace, monospace;
+  }
+
+  @media (max-width: 720px) {
+    .topbar { padding: 12px 14px; }
+    .stage { padding: 14px; }
+    .slide { padding: 18px 16px; }
+    .intro { padding: 28px 16px; }
+    .intro .info-grid { grid-template-columns: 1fr; padding: 14px 16px; }
+    .pdf-frame { height: 50vh; min-height: 320px; }
+    .navbar { padding: 12px 14px; }
+    .btn { padding: 8px 16px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-title">GIEROS <small>· Potwierdzenie projektu</small></div>
+    <div class="topbar-meta" id="topbarMeta"></div>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="stage" id="stage"><div class="slide"><p>Ładowanie…</p></div></div>
+  <div class="navbar" id="navbar" style="display:none;">
+    <button class="btn" id="btnBack" onclick="navigatePrev()">← Wstecz</button>
+    <div id="navInfo" style="font-size:13px;color:var(--muted);"></div>
+    <button class="btn btn-primary" id="btnNext" onclick="navigateNext()">Dalej →</button>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────
+// KONFIG — zmień na swój adres
+// ──────────────────────────────────────────────────────────────
+var FORMSUBMIT_EMAIL = 'biuro@gieros.pl';
+
+// ──────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────
+var state = {
+  klientId: null,
+  manifest: null,
+  slajdy: [],         // [{id, tytul, opis, plik}]
+  idx: 0,             // 0 = intro, 1..N = slajdy, N+1 = podsumowanie
+  totalSteps: 0,
+  acceptance: {}      // { slideId: { ok: bool, uwaga: string } }
+};
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg, ok) {
+  var t = document.createElement('div');
+  t.className = 'toast' + (ok === false ? ' err' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3800);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Init: pobierz manifest na podstawie ?klient=ID
+// ──────────────────────────────────────────────────────────────
+async function init() {
+  var params = new URLSearchParams(location.search);
+  var klient = params.get('klient');
+  if (!klient) {
+    $('stage').innerHTML = '<div class="error-screen"><h2>Brakuje identyfikatora klienta</h2>'
+      + '<p>Otwórz link postaci <code>?klient=K-2026-001</code></p></div>';
+    return;
+  }
+  state.klientId = klient;
+  try {
+    var resp = await fetch('klienci/' + encodeURIComponent(klient) + '/manifest.json', { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    state.manifest = await resp.json();
+  } catch (e) {
+    $('stage').innerHTML = '<div class="error-screen"><h2>Nie znaleziono ankiety</h2>'
+      + '<p>Nie udało się wczytać <code>klienci/' + esc(klient) + '/manifest.json</code></p>'
+      + '<p style="color:var(--muted);font-size:13px;">' + esc(e.message || e) + '</p></div>';
+    return;
+  }
+  state.slajdy = state.manifest.slajdy || [];
+  state.totalSteps = state.slajdy.length + 2; // intro + slides + summary
+  loadProgress();
+  render();
+}
+
+// ──────────────────────────────────────────────────────────────
+// Persistence — zapisz progres tak by reload nie tracił akceptacji
+// ──────────────────────────────────────────────────────────────
+function saveProgress() {
+  try {
+    localStorage.setItem('gieros_ankieta_' + state.klientId, JSON.stringify({
+      idx: state.idx,
+      acceptance: state.acceptance
+    }));
+  } catch (_) {}
+}
+function loadProgress() {
+  try {
+    var raw = localStorage.getItem('gieros_ankieta_' + state.klientId);
+    if (raw) {
+      var s = JSON.parse(raw);
+      state.idx = s.idx || 0;
+      state.acceptance = s.acceptance || {};
+    }
+  } catch (_) {}
+}
+
+// ──────────────────────────────────────────────────────────────
+// Nawigacja
+// ──────────────────────────────────────────────────────────────
+function navigateNext() {
+  // Walidacja: nie pozwól przejść jeśli na slajdzie z rysunkiem brak akceptacji
+  var slideIdx = state.idx - 1; // 0-based w state.slajdy
+  if (state.idx >= 1 && state.idx <= state.slajdy.length) {
+    var slide = state.slajdy[slideIdx];
+    var acc = state.acceptance[slide.id];
+    if (!acc || !acc.ok) {
+      toast('Zaznacz akceptację lub wpisz uwagę zanim przejdziesz dalej.', false);
+      return;
+    }
+  }
+  if (state.idx < state.totalSteps - 1) {
+    state.idx++;
+    saveProgress();
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+function navigatePrev() {
+  if (state.idx > 0) {
+    state.idx--;
+    saveProgress();
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Render
+// ──────────────────────────────────────────────────────────────
+function render() {
+  var m = state.manifest || {};
+  var k = m.klient || {};
+  $('topbarMeta').innerHTML = (k.numerKlienta ? '<b>' + esc(k.numerKlienta) + '</b><br>' : '')
+                            + esc(k.inwestor || '');
+
+  // Progress bar
+  var pct = (state.idx / Math.max(1, state.totalSteps - 1)) * 100;
+  $('progressBar').style.width = pct + '%';
+
+  if (state.idx === 0) {
+    renderIntro(k);
+  } else if (state.idx >= 1 && state.idx <= state.slajdy.length) {
+    renderSlide(state.slajdy[state.idx - 1]);
+  } else {
+    renderSummary(k);
+  }
+  updateNav();
+}
+
+function renderIntro(k) {
+  var html = '<div class="slide"><div class="intro">';
+  html += '<h1>Potwierdzenie wymiarów projektu</h1>';
+  html += '<p class="lead">Witamy w systemie potwierdzenia projektu firmy <b>GIEROS</b>. '
+       +  'Poniżej przeprowadzimy Państwa przez serię rysunków technicznych. '
+       +  'Każdy z nich proszę uważnie obejrzeć i potwierdzić akceptację '
+       +  'albo wpisać uwagę jeśli coś wymaga korekty.</p>';
+  html += '<div class="info-grid">';
+  if (k.numerKlienta)    html += '<div><b>Numer klienta:</b> ' + esc(k.numerKlienta) + '</div>';
+  if (k.numerDokumentu)  html += '<div><b>Nr dokumentu:</b> ' + esc(k.numerDokumentu) + '</div>';
+  if (k.inwestor)        html += '<div><b>Inwestor:</b> ' + esc(k.inwestor) + '</div>';
+  if (k.adresBudowy)     html += '<div><b>Adres budowy:</b> ' + esc(k.adresBudowy) + '</div>';
+  if (k.data)            html += '<div><b>Data:</b> ' + esc(k.data) + '</div>';
+  if (k.osobaPrzygotowujaca) html += '<div><b>Przygotował:</b> ' + esc(k.osobaPrzygotowujaca) + '</div>';
+  html += '</div>';
+  html += '<p style="margin-top:24px;font-size:15px;color:var(--gieros);font-weight:600;">'
+       +  'Rysunków do przejrzenia: ' + state.slajdy.length + '</p>';
+  html += '</div></div>';
+  $('stage').innerHTML = html;
+}
+
+function renderSlide(slide) {
+  var acc = state.acceptance[slide.id] || { ok: false, uwaga: '' };
+  var pdfUrl = 'klienci/' + encodeURIComponent(state.klientId) + '/' + encodeURIComponent(slide.plik);
+  var html = '<div class="slide">';
+  html += '<div class="slide-header">';
+  html += '<h2 class="slide-title">' + esc(slide.tytul || 'Rysunek') + '</h2>';
+  html += '<span class="slide-counter">' + state.idx + ' / ' + state.slajdy.length + '</span>';
+  html += '</div>';
+  if (slide.opis) html += '<div class="slide-desc">' + esc(slide.opis) + '</div>';
+  if (slide.plik) {
+    html += '<embed class="pdf-frame" src="' + esc(pdfUrl) + '#toolbar=1&navpanes=0" type="application/pdf">';
+  } else {
+    html += '<div class="pdf-missing">Brak rysunku do tego slajdu.</div>';
+  }
+
+  html += '<div class="accept-row with-note">';
+  html += '<input type="checkbox" id="acceptCb" ' + (acc.ok ? 'checked' : '') + ' onchange="onAcceptChange(\'' + esc(slide.id) + '\', this.checked)">';
+  html += '<label for="acceptCb">Akceptuję ten rysunek.</label>';
+  html += '<textarea class="accept-uwaga" id="acceptNote" placeholder="Uwagi (opcjonalnie — np. „należy poprawić wymiar A=…")" '
+       +  'oninput="onNoteChange(\'' + esc(slide.id) + '\', this.value)">' + esc(acc.uwaga || '') + '</textarea>';
+  html += '</div>';
+  html += '</div>';
+  $('stage').innerHTML = html;
+}
+
+function renderSummary(k) {
+  var html = '<div class="slide">';
+  html += '<div class="slide-header"><h2 class="slide-title">Podsumowanie i wysłanie</h2></div>';
+  html += '<p class="slide-desc">Poniżej widzą Państwo zestawienie akceptacji wszystkich rysunków. '
+       +  'Po sprawdzeniu i wpisaniu daty oraz podpisu proszę kliknąć <b>Wyślij</b>.</p>';
+
+  var allOk = state.slajdy.length > 0 && state.slajdy.every(function(s){
+    return state.acceptance[s.id] && state.acceptance[s.id].ok;
+  });
+
+  html += '<ul class="summary-list">';
+  state.slajdy.forEach(function(s){
+    var acc = state.acceptance[s.id] || {};
+    var ok = !!acc.ok;
+    html += '<li><span class="status ' + (ok ? 'ok' : 'no') + '">' + (ok ? '✓' : '!') + '</span>';
+    html += '<div class="item-title"><b>' + esc(s.tytul || s.id) + '</b>';
+    if (acc.uwaga) html += '<div class="item-note">Uwaga: ' + esc(acc.uwaga) + '</div>';
+    html += '</div></li>';
+  });
+  html += '</ul>';
+
+  html += '<div class="status-banner ' + (allOk ? 'ok' : 'no') + '">';
+  html += allOk
+    ? 'Wszystkie rysunki zostały zaakceptowane. Projekt może zostać przekazany do realizacji.'
+    : 'Nie wszystkie rysunki zostały zaakceptowane — wracaj do nich strzałką „Wstecz" lub kliknij Wyślij z uwagami.';
+  html += '</div>';
+
+  html += '<div class="final-form">';
+  html += '<label>Imię i nazwisko podpisującego *</label>';
+  html += '<input type="text" id="finalName" placeholder="np. Jan Kowalski" value="' + esc(k.inwestor||'') + '">';
+  html += '<label>Data akceptacji</label>';
+  html += '<input type="date" id="finalDate" value="' + new Date().toISOString().slice(0,10) + '">';
+  html += '<label>E-mail klienta (do kopii)</label>';
+  html += '<input type="email" id="finalEmail" placeholder="opcjonalnie">';
+  html += '</div>';
+
+  html += '<div style="display:flex;justify-content:center;margin-top:24px;">';
+  html += '<button class="btn btn-primary btn-big" id="btnSend" onclick="wyslijFormularz()">📧 Wyślij potwierdzenie</button>';
+  html += '</div>';
+
+  html += '</div>';
+  $('stage').innerHTML = html;
+}
+
+function onAcceptChange(slideId, checked) {
+  if (!state.acceptance[slideId]) state.acceptance[slideId] = { ok: false, uwaga: '' };
+  state.acceptance[slideId].ok = checked;
+  saveProgress();
+}
+function onNoteChange(slideId, val) {
+  if (!state.acceptance[slideId]) state.acceptance[slideId] = { ok: false, uwaga: '' };
+  state.acceptance[slideId].uwaga = val;
+  saveProgress();
+}
+
+function updateNav() {
+  var nav = $('navbar');
+  // Pokaż navbar od slajdów (>=1), schowany na intro+summary (mają własne przyciski).
+  if (state.idx === 0) {
+    nav.style.display = 'flex';
+    $('btnBack').style.visibility = 'hidden';
+    $('btnNext').textContent = 'Rozpocznij →';
+    $('navInfo').textContent = state.slajdy.length + ' rysunków do akceptacji';
+  } else if (state.idx > 0 && state.idx <= state.slajdy.length) {
+    nav.style.display = 'flex';
+    $('btnBack').style.visibility = 'visible';
+    $('btnNext').textContent = state.idx === state.slajdy.length ? 'Podsumowanie →' : 'Dalej →';
+    $('navInfo').textContent = 'Krok ' + state.idx + ' z ' + state.slajdy.length;
+  } else {
+    // Summary — schowamy navbar, jest własny przycisk Wyślij.
+    nav.style.display = 'flex';
+    $('btnBack').style.visibility = 'visible';
+    $('btnNext').style.display = 'none';
+    $('navInfo').textContent = 'Podsumowanie';
+    return;
+  }
+  $('btnNext').style.display = '';
+}
+
+// ──────────────────────────────────────────────────────────────
+// Wysyłka maila — FormSubmit, bez PDF (pliki są już na serwerze)
+// ──────────────────────────────────────────────────────────────
+function _formatPayload() {
+  var m = state.manifest || {};
+  var k = m.klient || {};
+  var L = [];
+  L.push('═════════════════════════════════════════════════');
+  L.push('  POTWIERDZENIE PROJEKTU — GIEROS');
+  L.push('═════════════════════════════════════════════════');
+  L.push('');
+  L.push('Numer klienta:     ' + (k.numerKlienta || '—'));
+  L.push('Numer dokumentu:   ' + (k.numerDokumentu || '—'));
+  L.push('Inwestor:          ' + (k.inwestor || '—'));
+  L.push('Adres budowy:      ' + (k.adresBudowy || '—'));
+  L.push('Data dokumentu:    ' + (k.data || '—'));
+  L.push('Przygotował:       ' + (k.osobaPrzygotowujaca || '—'));
+  L.push('');
+  L.push('── AKCEPTACJA RYSUNKÓW ──');
+  state.slajdy.forEach(function(s, i){
+    var acc = state.acceptance[s.id] || {};
+    L.push('  [' + (i+1) + '] ' + (acc.ok ? '✓ AKCEPT' : '✗ BRAK')
+         + ' — ' + (s.tytul || s.id) + ' (' + (s.plik||'') + ')');
+    if (acc.uwaga) L.push('         Uwaga: ' + acc.uwaga);
+  });
+  L.push('');
+  var allOk = state.slajdy.every(function(s){
+    return state.acceptance[s.id] && state.acceptance[s.id].ok;
+  });
+  L.push('STATUS: ' + (allOk
+    ? 'PROJEKT ZAAKCEPTOWANY — możliwe przekazanie do produkcji'
+    : 'NIE WSZYSTKIE RYSUNKI ZAAKCEPTOWANE'));
+  L.push('');
+  L.push('Podpisujący:       ' + ($('finalName') ? $('finalName').value : ''));
+  L.push('Data akceptacji:   ' + ($('finalDate') ? $('finalDate').value : ''));
+  L.push('E-mail klienta:    ' + ($('finalEmail') ? $('finalEmail').value : ''));
+  return L.join('\n');
+}
+
+async function wyslijFormularz() {
+  var btn = $('btnSend');
+  var name = ($('finalName').value || '').trim();
+  if (!name) { toast('Wpisz imię i nazwisko zanim wyślesz.', false); return; }
+
+  btn.disabled = true;
+  var oldText = btn.textContent;
+  btn.textContent = '⏳ Wysyłam…';
+
+  var m = state.manifest || {};
+  var k = m.klient || {};
+  var text = _formatPayload();
+  var allOk = state.slajdy.every(function(s){
+    return state.acceptance[s.id] && state.acceptance[s.id].ok;
+  });
+
+  // AJAX endpoint — JSON, brak załączników (rysunki są już w repo).
+  var data = {
+    _subject: 'Potwierdzenie ' + (k.numerDokumentu || k.numerKlienta || 'projektu')
+            + ' — ' + (allOk ? 'AKCEPT' : 'do poprawy'),
+    _template: 'box',
+    _captcha: 'false',
+    'Numer klienta': k.numerKlienta,
+    'Numer dokumentu': k.numerDokumentu,
+    'Inwestor': k.inwestor,
+    'Adres budowy': k.adresBudowy,
+    'Status': allOk ? 'ZAAKCEPTOWANY' : 'DO POPRAWY',
+    'Podpis': name,
+    'Data akceptacji': $('finalDate').value,
+    'E-mail klienta': $('finalEmail').value,
+    'Pełne dane (tekst)': text,
+    'Dane JSON': JSON.stringify({
+      klient: k,
+      slajdy: state.slajdy.map(function(s){
+        return {
+          id: s.id, tytul: s.tytul, plik: s.plik,
+          akceptacja: state.acceptance[s.id] || { ok: false, uwaga: '' }
+        };
+      }),
+      podpis: name,
+      dataAkceptacji: $('finalDate').value,
+      emailKlienta: $('finalEmail').value
+    })
+  };
+
+  try {
+    var resp = await fetch('https://formsubmit.co/ajax/' + encodeURIComponent(FORMSUBMIT_EMAIL), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    var json = await resp.json().catch(function(){ return {}; });
+    if (resp.ok && (json.success === 'true' || json.success === true)) {
+      $('stage').innerHTML = '<div class="slide intro"><h1>✅ Dziękujemy!</h1>'
+        + '<p class="lead">Potwierdzenie zostało wysłane do firmy GIEROS. '
+        + 'Skontaktujemy się z Państwem niezwłocznie w sprawie dalszych kroków.</p></div>';
+      $('navbar').style.display = 'none';
+      $('progressBar').style.width = '100%';
+      // Wyczyść lokalny progres — ankieta wysłana
+      try { localStorage.removeItem('gieros_ankieta_' + state.klientId); } catch(_) {}
+    } else {
+      toast(json.message || 'Nie udało się wysłać. Spróbuj jeszcze raz.', false);
+      btn.disabled = false;
+      btn.textContent = oldText;
+    }
+  } catch (e) {
+    toast('Błąd wysyłki: ' + (e.message || e), false);
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

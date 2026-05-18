@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Kreator ankiet — GIEROS</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --graphite: #2d2d2d;
+    --gieros: #1f4d2b;
+    --gieros-light: #2f6f3f;
+    --line: #d0d0d0;
+    --line-strong: #555;
+    --bg: #f4f5f3;
+    --bg-card: #ffffff;
+    --muted: #6a6a6a;
+    --accent-bg: #eaf2ec;
+    --danger: #b03a2e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink); }
+
+  .topbar {
+    background: var(--gieros);
+    color: white;
+    padding: 14px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .topbar-title { font-size: 17px; font-weight: 700; }
+  .topbar-title small { font-weight: 400; opacity: 0.85; }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 22px auto;
+    padding: 0 22px 60px;
+  }
+  .card {
+    background: var(--bg-card);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  }
+  h2 {
+    color: var(--gieros);
+    margin: 0 0 14px;
+    font-size: 17px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--gieros);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 18px;
+  }
+  label {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 12.5px; color: var(--graphite); font-weight: 600;
+  }
+  input, textarea, select {
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    color: var(--ink);
+    border-radius: 4px;
+  }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--gieros); border-color: var(--gieros); }
+  textarea { min-height: 60px; resize: vertical; }
+  .btn {
+    border: 1px solid var(--gieros);
+    background: white;
+    color: var(--gieros);
+    padding: 9px 18px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { background: var(--gieros); color: white; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--gieros); color: white; }
+  .btn-primary:hover:not(:disabled) { background: var(--gieros-light); }
+  .btn-danger { color: var(--danger); border-color: var(--danger); }
+  .btn-danger:hover:not(:disabled) { background: var(--danger); color: white; }
+
+  .slug-display {
+    background: var(--accent-bg);
+    border: 1px dashed var(--gieros);
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-top: 8px;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    color: var(--gieros);
+    word-break: break-all;
+  }
+
+  .slide-list { margin-top: 12px; }
+  .slide-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 2fr 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: white;
+  }
+  .slide-row .row-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--gieros);
+    color: white;
+    font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .slide-row input.title { font-weight: 600; }
+  .slide-row input[type=file] { font-size: 12px; }
+  .slide-row .file-info {
+    font-size: 12px; color: var(--muted);
+    background: var(--bg);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .slide-row .file-info.missing { color: var(--danger); font-style: italic; }
+  .slide-row button { padding: 4px 8px; font-size: 12px; }
+
+  .actions-bar {
+    display: flex; gap: 10px; justify-content: flex-end;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .status {
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .status.ok { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+  .status.err { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; }
+
+  .small { font-size: 12px; color: var(--muted); }
+
+  .preview-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-bg);
+    color: var(--gieros);
+    padding: 8px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .preview-link:hover { background: var(--gieros); color: white; }
+
+  .info-box {
+    background: #eaf4ff;
+    border-left: 4px solid #2a82e0;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .info-box code {
+    background: white;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: ui-monospace, monospace;
+  }
+
+  /* hidden klienci browser */
+  .klienci-list {
+    margin-top: 12px;
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .klienci-list .ki-row {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px;
+  }
+  .klienci-list .ki-row:last-child { border-bottom: none; }
+  .klienci-list .ki-row:hover { background: var(--accent-bg); }
+  .klienci-list .ki-slug { font-family: ui-monospace, monospace; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">GIEROS <small>· Kreator ankiet (ADMIN)</small></div>
+  <div style="font-size:13px;opacity:0.85;">⚠ Strona robocza — nie wysyłaj klientom</div>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>1. Dane klienta</h2>
+    <div class="info-box">
+      Identyfikator folderu (slug) generowany automatycznie z <b>nazwiska/imienia inwestora</b> i <b>adresu budowy</b>.
+      Plik manifestu zapisze się jako <code>klienci/&lt;slug&gt;/manifest.json</code>.
+    </div>
+    <div class="grid">
+      <label>Inwestor (imię i nazwisko) *
+        <input type="text" id="inwestor" placeholder="np. Jan Kowalski" oninput="updateSlug()">
+      </label>
+      <label>Adres budowy *
+        <input type="text" id="adresBudowy" placeholder="np. ul. Słoneczna 12, Warszawa" oninput="updateSlug()">
+      </label>
+      <label>Numer dokumentu
+        <input type="text" id="numerDokumentu" placeholder="np. PWB-2026-014/01">
+      </label>
+      <label>Numer klienta (CRM)
+        <input type="text" id="numerKlienta" placeholder="np. K-2026-014">
+      </label>
+      <label>Data dokumentu
+        <input type="date" id="dataDokumentu">
+      </label>
+      <label>Osoba przygotowująca
+        <input type="text" id="osobaPrzygotowujaca" placeholder="np. Wojciech Wojtach">
+      </label>
+    </div>
+    <div class="slug-display" id="slugDisplay">slug: <i>(uzupełnij inwestora i adres)</i></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Rysunki do akceptacji (slajdy)</h2>
+    <p class="small">Każdy rysunek = jeden slajd. Kolejność na liście = kolejność prezentacji klientowi.
+    Akceptowane są PDF jednostronicowe. Kliknij „📄 Wybierz plik" by wskazać PDF z dysku.</p>
+    <div class="slide-list" id="slideList"></div>
+    <div class="actions-bar">
+      <button class="btn" onclick="addSlide()">+ Dodaj slajd</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Zapis na dysk + push na GitHub</h2>
+    <div class="info-box">
+      Wybierz folder <code>klienci/</code> w lokalnym repozytorium. Admin utworzy w nim podfolder klienta
+      z plikami PDF i manifestem. Potem ręcznie wykonaj <code>git add . &amp;&amp; git commit -m "..." &amp;&amp; git push</code>
+      (lub kliknij <b>„Pokaż link"</b> by skopiować URL gotowej ankiety).
+    </div>
+    <div class="actions-bar">
+      <button class="btn btn-primary" onclick="zapiszDoFolderu()">💾 Zapisz do folderu klienci/</button>
+      <button class="btn" onclick="pobierzZip()" id="zipBtn" style="display:none;">⬇ Pobierz jako ZIP</button>
+      <button class="btn" onclick="pokazLink()">🔗 Pokaż link do ankiety</button>
+    </div>
+    <div id="zapiszStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. Istniejący klienci (z folderu)</h2>
+    <p class="small">Lista folderów już zapisanych w katalogu <code>klienci/</code>. Wybierz aby otworzyć ankietę lub edytować.</p>
+    <div class="actions-bar" style="justify-content:flex-start;">
+      <button class="btn" onclick="wczytajListeKlientow()">🔄 Odśwież listę</button>
+    </div>
+    <div class="klienci-list" id="klienciList"><div style="padding:14px;color:var(--muted);font-size:13px;">Kliknij „Odśwież listę" aby wskazać folder klienci/.</div></div>
+  </div>
+
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────
+var state = {
+  slides: [],           // [{ id, tytul, opis, file, fileName }]
+  dirHandle: null,      // handle do folderu klienci/ (File System Access API)
+};
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ──────────────────────────────────────────────────────────────
+// Slug generation: nazwisko + adres → bezpieczna nazwa folderu
+// ──────────────────────────────────────────────────────────────
+function makeSlug(inwestor, adres) {
+  function clean(s) {
+    return String(s||'')
+      .toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')   // zdejmij diakrytyki
+      .replace(/ł/g, 'l').replace(/Ł/g, 'l')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  var inw = clean(inwestor);
+  var adr = clean(adres);
+  if (!inw && !adr) return '';
+  if (!inw) return adr;
+  if (!adr) return inw;
+  return inw + '_' + adr;
+}
+
+function updateSlug() {
+  var s = makeSlug($('inwestor').value, $('adresBudowy').value);
+  $('slugDisplay').innerHTML = s
+    ? 'slug: <b>' + esc(s) + '</b>  →  <code>klienci/' + esc(s) + '/</code>'
+    : 'slug: <i>(uzupełnij inwestora i adres)</i>';
+}
+
+// ──────────────────────────────────────────────────────────────
+// Slides
+// ──────────────────────────────────────────────────────────────
+function addSlide() {
+  state.slides.push({
+    id: 'slide-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    tytul: '',
+    opis: '',
+    file: null,
+    fileName: ''
+  });
+  renderSlides();
+}
+
+function removeSlide(idx) {
+  state.slides.splice(idx, 1);
+  renderSlides();
+}
+
+function moveSlide(idx, dir) {
+  var ni = idx + dir;
+  if (ni < 0 || ni >= state.slides.length) return;
+  var tmp = state.slides[idx];
+  state.slides[idx] = state.slides[ni];
+  state.slides[ni] = tmp;
+  renderSlides();
+}
+
+function onSlideFile(idx, ev) {
+  var f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  state.slides[idx].file = f;
+  state.slides[idx].fileName = f.name;
+  renderSlides();
+}
+
+function onSlideTitle(idx, val) { state.slides[idx].tytul = val; }
+function onSlideOpis(idx, val) { state.slides[idx].opis = val; }
+
+function renderSlides() {
+  var wrap = $('slideList');
+  if (!state.slides.length) {
+    wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">'
+                   + 'Brak slajdów. Kliknij „+ Dodaj slajd" aby zacząć.</div>';
+    return;
+  }
+  var html = '';
+  state.slides.forEach(function(s, i){
+    html += '<div class="slide-row">';
+    html += '<span class="row-num">' + (i+1) + '</span>';
+    html += '<input type="text" class="title" placeholder="Tytuł rysunku (np. Rzut parteru)" value="' + esc(s.tytul) + '" oninput="onSlideTitle(' + i + ', this.value)">';
+    html += '<textarea placeholder="Opis dla klienta — co ma sprawdzić" oninput="onSlideOpis(' + i + ', this.value)">' + esc(s.opis) + '</textarea>';
+    html += '<div>';
+    html += '<input type="file" accept="application/pdf,image/*" id="file_' + i + '" style="display:none;" onchange="onSlideFile(' + i + ', event)">';
+    html += '<button class="btn" onclick="document.getElementById(\'file_' + i + '\').click()">📄 ' + (s.fileName ? 'Zmień' : 'Wybierz plik') + '</button>';
+    html += '<div class="file-info ' + (s.fileName ? '' : 'missing') + '" style="margin-top:6px;max-width:200px;">' + (s.fileName ? esc(s.fileName) : '(brak pliku)') + '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+    html += '<button class="btn" onclick="moveSlide(' + i + ', -1)" title="W górę">▲</button>';
+    html += '<button class="btn" onclick="moveSlide(' + i + ', 1)" title="W dół">▼</button>';
+    html += '</div>';
+    html += '<button class="btn btn-danger" onclick="removeSlide(' + i + ')" title="Usuń">✕</button>';
+    html += '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Build manifest object
+// ──────────────────────────────────────────────────────────────
+function buildManifest(slug) {
+  return {
+    wersja: 1,
+    slug: slug,
+    klient: {
+      numerKlienta: $('numerKlienta').value.trim(),
+      numerDokumentu: $('numerDokumentu').value.trim(),
+      inwestor: $('inwestor').value.trim(),
+      adresBudowy: $('adresBudowy').value.trim(),
+      data: $('dataDokumentu').value,
+      osobaPrzygotowujaca: $('osobaPrzygotowujaca').value.trim()
+    },
+    slajdy: state.slides.map(function(s, i){
+      // sanitize plik nazwa: bez polskich znaków, bez spacji
+      var safeName = '';
+      if (s.fileName) {
+        safeName = (String(i+1).padStart(2,'0') + '-' + s.fileName)
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .replace(/[ąśćńłóżźĄŚĆŃŁÓŻŹ]/gi, function(c){
+            return ({ą:'a',ś:'s',ć:'c',ń:'n',ł:'l',ó:'o',ż:'z',ź:'z'})[c.toLowerCase()] || c;
+          })
+          .replace(/[^a-zA-Z0-9._-]/g, '-')
+          .replace(/-+/g, '-');
+      }
+      return {
+        id: s.id,
+        tytul: s.tytul.trim(),
+        opis: s.opis.trim(),
+        plik: safeName
+      };
+    }),
+    utworzono: new Date().toISOString()
+  };
+}
+
+function validateForm() {
+  var slug = makeSlug($('inwestor').value, $('adresBudowy').value);
+  if (!slug) { alert('Wpisz inwestora i adres budowy.'); return null; }
+  if (!state.slides.length) { alert('Dodaj przynajmniej jeden slajd.'); return null; }
+  var missing = state.slides.findIndex(function(s){ return !s.file; });
+  if (missing >= 0) { alert('Slajd #' + (missing+1) + ' nie ma wybranego pliku.'); return null; }
+  var notitled = state.slides.findIndex(function(s){ return !s.tytul.trim(); });
+  if (notitled >= 0) { alert('Slajd #' + (notitled+1) + ' nie ma tytułu.'); return null; }
+  return slug;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Zapisz do folderu (File System Access API — Chrome/Edge)
+// ──────────────────────────────────────────────────────────────
+async function zapiszDoFolderu() {
+  var slug = validateForm();
+  if (!slug) return;
+
+  if (typeof window.showDirectoryPicker !== 'function') {
+    setStatus('Twoja przeglądarka nie wspiera zapisu do folderu (File System Access API). '
+            + 'Użyj Chrome/Edge albo skorzystaj z opcji „Pobierz jako ZIP".', false);
+    $('zipBtn').style.display = '';
+    return;
+  }
+
+  try {
+    if (!state.dirHandle) {
+      state.dirHandle = await window.showDirectoryPicker({
+        id: 'gieros-klienci',
+        mode: 'readwrite',
+        startIn: 'documents'
+      });
+    }
+    var clientDir = await state.dirHandle.getDirectoryHandle(slug, { create: true });
+
+    // Zapisz każdy plik PDF
+    var manifest = buildManifest(slug);
+    for (var i = 0; i < state.slides.length; i++) {
+      var s = state.slides[i];
+      var fileName = manifest.slajdy[i].plik;
+      var fh = await clientDir.getFileHandle(fileName, { create: true });
+      var ws = await fh.createWritable();
+      await ws.write(s.file);
+      await ws.close();
+    }
+    // Zapisz manifest
+    var mfh = await clientDir.getFileHandle('manifest.json', { create: true });
+    var mws = await mfh.createWritable();
+    await mws.write(new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
+    await mws.close();
+
+    setStatus('✅ Zapisano <b>' + state.slides.length + '</b> rysunków + manifest do folderu <code>klienci/' + esc(slug) + '/</code>.<br>'
+            + 'Teraz wykonaj w terminalu: <code>git add Ankieta/klienci/' + esc(slug) + ' &amp;&amp; git commit -m "ankieta: ' + esc(slug) + '" &amp;&amp; git push</code><br>'
+            + 'Po pushu link do ankiety: <a class="preview-link" href="?klient=' + encodeURIComponent(slug) + '" target="_blank">Otwórz ankietę (lokalnie)</a>', true);
+  } catch (e) {
+    if (e.name === 'AbortError') return; // user anulował picker
+    setStatus('❌ Błąd zapisu: ' + esc(e.message || e), false);
+  }
+}
+
+// Fallback: pobierz wszystko jako ZIP (gdy brak File System Access).
+async function pobierzZip() {
+  var slug = validateForm();
+  if (!slug) return;
+  // Prosty ZIP — bez biblioteki: każdy plik osobno (downloads). Albo wymaga JSZip z CDN.
+  // Tu uproszczenie: pobierz manifest + osobno każdy plik.
+  var manifest = buildManifest(slug);
+  download(JSON.stringify(manifest, null, 2), slug + '_manifest.json', 'application/json');
+  state.slides.forEach(function(s, i){
+    var newName = manifest.slajdy[i].plik;
+    var url = URL.createObjectURL(s.file);
+    var a = document.createElement('a');
+    a.href = url; a.download = newName;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  });
+  setStatus('Pobrano manifest + ' + state.slides.length + ' plików. Wrzuć je ręcznie do folderu <code>klienci/' + esc(slug) + '/</code> i zrób push.', true);
+}
+
+function download(content, name, mime) {
+  var blob = new Blob([content], { type: mime || 'text/plain' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+function pokazLink() {
+  var slug = makeSlug($('inwestor').value, $('adresBudowy').value);
+  if (!slug) { alert('Wpisz inwestora i adres budowy.'); return; }
+  var url = location.origin + location.pathname.replace(/admin\.html$/, 'index.html')
+          + '?klient=' + encodeURIComponent(slug);
+  // Skopiuj do schowka
+  try {
+    navigator.clipboard.writeText(url);
+    setStatus('🔗 Link skopiowany do schowka:<br><code>' + esc(url) + '</code>', true);
+  } catch(_e) {
+    setStatus('🔗 Link do ankiety:<br><code>' + esc(url) + '</code><br>(nie udało się skopiować automatycznie, skopiuj ręcznie)', true);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Lista istniejących klientów (z folderu)
+// ──────────────────────────────────────────────────────────────
+async function wczytajListeKlientow() {
+  if (typeof window.showDirectoryPicker !== 'function') {
+    $('klienciList').innerHTML = '<div style="padding:14px;color:var(--danger);font-size:13px;">Brak wsparcia File System Access API w tej przeglądarce.</div>';
+    return;
+  }
+  try {
+    var dir = state.dirHandle || await window.showDirectoryPicker({
+      id: 'gieros-klienci', mode: 'read', startIn: 'documents'
+    });
+    state.dirHandle = dir;
+    var rows = [];
+    for await (var entry of dir.values()) {
+      if (entry.kind !== 'directory') continue;
+      var meta = {};
+      try {
+        var fh = await entry.getFileHandle('manifest.json');
+        var f = await fh.getFile();
+        meta = JSON.parse(await f.text());
+      } catch(_) {}
+      rows.push({ slug: entry.name, meta: meta });
+    }
+    if (!rows.length) {
+      $('klienciList').innerHTML = '<div style="padding:14px;color:var(--muted);font-size:13px;">Folder pusty.</div>';
+      return;
+    }
+    rows.sort(function(a,b){ return a.slug.localeCompare(b.slug); });
+    var html = '';
+    rows.forEach(function(r){
+      var k = r.meta.klient || {};
+      var slidesCount = (r.meta.slajdy || []).length;
+      html += '<div class="ki-row">';
+      html += '<div>';
+      html += '<b>' + esc(k.inwestor || r.slug) + '</b>';
+      if (k.adresBudowy) html += ' — ' + esc(k.adresBudowy);
+      html += '<div class="ki-slug">' + esc(r.slug) + ' · ' + slidesCount + ' rysunków</div>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:6px;">';
+      html += '<a class="btn" href="index.html?klient=' + encodeURIComponent(r.slug) + '" target="_blank">Otwórz</a>';
+      html += '</div>';
+      html += '</div>';
+    });
+    $('klienciList').innerHTML = html;
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    $('klienciList').innerHTML = '<div style="padding:14px;color:var(--danger);">Błąd: ' + esc(e.message || e) + '</div>';
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Status helper
+// ──────────────────────────────────────────────────────────────
+function setStatus(html, ok) {
+  $('zapiszStatus').innerHTML = '<div class="status ' + (ok ? 'ok' : 'err') + '">' + html + '</div>';
+}
+
+// ──────────────────────────────────────────────────────────────
+// Init
+// ──────────────────────────────────────────────────────────────
+(function init() {
+  $('dataDokumentu').value = new Date().toISOString().slice(0, 10);
+  renderSlides();
+  updateSlug();
+})();
+</script>
+</body>
+</html>
